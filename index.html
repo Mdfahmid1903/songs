@@ -1,0 +1,1293 @@
+Moodwave · HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MOODWAVE — music that feels what you feel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=JetBrains+Mono:wght@300;500&display=swap" rel="stylesheet">
+<style>
+  /* ---------- BASE ---------- */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+ 
+  :root {
+    /* These get overwritten by JS when emotion changes */
+    --bg-1: #0b0a14;
+    --bg-2: #1a1428;
+    --accent: #ff5e8a;
+    --accent-2: #ffd166;
+    --text: #f6f1e7;
+    --text-dim: rgba(246, 241, 231, 0.55);
+    --grain: 0.06;
+    --ease: cubic-bezier(.7,0,.2,1);
+  }
+ 
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg-1);
+    color: var(--text);
+    font-family: 'Bricolage Grotesque', sans-serif;
+    cursor: none;
+    transition: background 1.2s var(--ease);
+  }
+ 
+  /* Custom cursor */
+  .cursor-dot, .cursor-ring {
+    position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9999;
+    border-radius: 50%; mix-blend-mode: difference;
+    transition: transform .15s var(--ease), width .3s var(--ease), height .3s var(--ease);
+  }
+  .cursor-dot { width: 6px; height: 6px; background: #fff; transform: translate(-50%, -50%); }
+  .cursor-ring { width: 36px; height: 36px; border: 1.5px solid #fff; transform: translate(-50%, -50%); transition: transform .35s var(--ease), width .35s var(--ease), height .35s var(--ease); }
+  .cursor-ring.hover { width: 70px; height: 70px; border-color: var(--accent); }
+ 
+  /* ---------- BACKGROUND LAYERS ---------- */
+  .bg-gradient {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse at 20% 20%, var(--accent) 0%, transparent 45%),
+      radial-gradient(ellipse at 80% 70%, var(--accent-2) 0%, transparent 50%),
+      linear-gradient(135deg, var(--bg-1), var(--bg-2));
+    filter: saturate(1.1);
+    transition: background 1.2s var(--ease), filter .8s var(--ease);
+    animation: float-bg 18s ease-in-out infinite alternate;
+  }
+  @keyframes float-bg {
+    0%   { transform: scale(1) translate(0, 0); }
+    100% { transform: scale(1.15) translate(-3%, -2%); }
+  }
+ 
+  #particles, #visualizer {
+    position: fixed; inset: 0; pointer-events: none;
+  }
+  #particles { z-index: 1; }
+  #visualizer { z-index: 2; opacity: .85; }
+ 
+  .grain {
+    position: fixed; inset: -50%; z-index: 3; pointer-events: none;
+    opacity: var(--grain);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='1'/></svg>");
+    mix-blend-mode: overlay;
+    animation: grain-shift .8s steps(6) infinite;
+  }
+  @keyframes grain-shift {
+    0%   { transform: translate(0,0); }
+    20%  { transform: translate(-3%, 2%); }
+    40%  { transform: translate(2%, -3%); }
+    60%  { transform: translate(-2%, -2%); }
+    80%  { transform: translate(3%, 3%); }
+    100% { transform: translate(0,0); }
+  }
+ 
+  /* ---------- LAYOUT ---------- */
+  .stage {
+    position: relative; z-index: 5;
+    width: 100vw; height: 100vh;
+    display: grid; place-items: center;
+    padding: 32px;
+  }
+ 
+  /* Top bar */
+  .topbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 24px 36px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: .25em; text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .logo {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic; font-size: 28px; letter-spacing: 0;
+    color: var(--text); text-transform: none;
+  }
+  .logo span { color: var(--accent); }
+  .topbar .meta { display: flex; gap: 28px; }
+  .live-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent); margin-right: 8px;
+    box-shadow: 0 0 14px var(--accent);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: .4; transform: scale(.75); }
+  }
+ 
+  /* ---------- VIEW: PICKER ---------- */
+  .view { width: 100%; max-width: 1200px; }
+  .view-picker .headline {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-size: clamp(48px, 9vw, 144px);
+    line-height: .92;
+    letter-spacing: -0.02em;
+    text-align: center;
+    margin-bottom: 18px;
+  }
+  .view-picker .headline em {
+    font-style: italic; color: var(--accent);
+    display: inline-block;
+    animation: gentle-tilt 6s ease-in-out infinite;
+  }
+  @keyframes gentle-tilt {
+    0%, 100% { transform: rotate(-2deg); }
+    50%      { transform: rotate(3deg); }
+  }
+  .view-picker .sub {
+    text-align: center;
+    max-width: 560px;
+    margin: 0 auto 48px;
+    color: var(--text-dim);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+ 
+  .searchbar {
+    width: min(560px, 90%);
+    margin: 0 auto 56px;
+    position: relative;
+  }
+  .searchbar input {
+    width: 100%;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.12);
+    backdrop-filter: blur(20px);
+    color: var(--text);
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 17px;
+    padding: 20px 24px 20px 56px;
+    border-radius: 999px;
+    outline: none;
+    transition: all .3s var(--ease);
+  }
+  .searchbar input::placeholder { color: var(--text-dim); }
+  .searchbar input:focus {
+    border-color: var(--accent);
+    background: rgba(255,255,255,.07);
+    box-shadow: 0 0 0 4px rgba(255,255,255,.04), 0 20px 60px rgba(0,0,0,.3);
+  }
+  .searchbar svg {
+    position: absolute; top: 50%; left: 22px; transform: translateY(-50%);
+    width: 18px; height: 18px; stroke: var(--text-dim);
+  }
+ 
+  .emotions {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    max-width: 880px;
+    margin: 0 auto;
+  }
+  @media (max-width: 720px) {
+    .emotions { grid-template-columns: repeat(2, 1fr); }
+  }
+  .emo-btn {
+    position: relative;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.12);
+    backdrop-filter: blur(20px);
+    color: var(--text);
+    padding: 22px 18px 20px;
+    border-radius: 22px;
+    cursor: none;
+    text-align: left;
+    transition: all .4s var(--ease);
+    overflow: hidden;
+    font-family: 'Bricolage Grotesque', sans-serif;
+  }
+  .emo-btn::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(circle at var(--mx,50%) var(--my,50%),
+                var(--emo-color) 0%, transparent 60%);
+    opacity: 0; transition: opacity .5s var(--ease);
+  }
+  .emo-btn:hover { transform: translateY(-4px); border-color: var(--emo-color); }
+  .emo-btn:hover::before { opacity: .35; }
+  .emo-btn .glyph {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 38px;
+    color: var(--emo-color);
+    line-height: 1;
+    margin-bottom: 22px;
+    display: block;
+    position: relative;
+  }
+  .emo-btn .label {
+    display: block;
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: -.01em;
+    position: relative;
+  }
+  .emo-btn .desc {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    position: relative;
+  }
+ 
+  /* Stagger entry */
+  .emo-btn { opacity: 0; transform: translateY(20px); animation: rise .8s var(--ease) forwards; }
+  .emo-btn:nth-child(1) { animation-delay: .1s; }
+  .emo-btn:nth-child(2) { animation-delay: .18s; }
+  .emo-btn:nth-child(3) { animation-delay: .26s; }
+  .emo-btn:nth-child(4) { animation-delay: .34s; }
+  .emo-btn:nth-child(5) { animation-delay: .42s; }
+  .emo-btn:nth-child(6) { animation-delay: .50s; }
+  .emo-btn:nth-child(7) { animation-delay: .58s; }
+  .emo-btn:nth-child(8) { animation-delay: .66s; }
+  @keyframes rise {
+    to { opacity: 1; transform: translateY(0); }
+  }
+ 
+  /* ---------- VIEW: PLAYER ---------- */
+  .view-player { display: none; }
+  .view-player.active { display: block; }
+ 
+  .player-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: 60px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  @media (max-width: 900px) { .player-wrap { grid-template-columns: 1fr; gap: 30px; } }
+ 
+  .now-emotion {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .3em;
+    color: var(--text-dim);
+    margin-bottom: 18px;
+  }
+  .now-emotion .dot { color: var(--accent); }
+  .track-name {
+    font-family: 'Instrument Serif', serif;
+    font-size: clamp(48px, 7vw, 96px);
+    font-style: italic;
+    line-height: .95;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+  }
+  .track-meta {
+    color: var(--text-dim);
+    font-size: 15px;
+    margin-bottom: 36px;
+    max-width: 460px;
+    line-height: 1.5;
+  }
+ 
+  .controls {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 28px;
+  }
+  .ctrl {
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.12);
+    color: var(--text);
+    width: 52px; height: 52px; border-radius: 50%;
+    display: grid; place-items: center;
+    cursor: none;
+    transition: all .3s var(--ease);
+    backdrop-filter: blur(10px);
+  }
+  .ctrl:hover { background: var(--accent); border-color: var(--accent); transform: scale(1.08); }
+  .ctrl.play {
+    width: 72px; height: 72px;
+    background: var(--accent);
+    color: var(--bg-1);
+    border-color: transparent;
+    box-shadow: 0 0 40px var(--accent);
+  }
+  .ctrl.play:hover { transform: scale(1.1); background: var(--accent-2); box-shadow: 0 0 50px var(--accent-2); }
+  .ctrl svg { width: 18px; height: 18px; }
+  .ctrl.play svg { width: 22px; height: 22px; }
+ 
+  .progress {
+    height: 3px; background: rgba(255,255,255,.1); border-radius: 99px; overflow: hidden;
+    max-width: 460px;
+  }
+  .progress-fill {
+    height: 100%; background: var(--accent);
+    width: 0%;
+    box-shadow: 0 0 10px var(--accent);
+    transition: width .1s linear;
+  }
+  .time-row {
+    display: flex; justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 10px;
+    max-width: 460px;
+  }
+ 
+  /* Disc */
+  .disc-wrap {
+    position: relative;
+    display: grid; place-items: center;
+    aspect-ratio: 1; max-width: 460px; margin: 0 auto;
+  }
+  .disc {
+    width: 100%; aspect-ratio: 1;
+    border-radius: 50%;
+    background:
+      conic-gradient(from 0deg, var(--accent), var(--accent-2), var(--accent));
+    position: relative;
+    box-shadow:
+      0 0 80px rgba(0,0,0,.5),
+      0 0 0 1px rgba(255,255,255,.08) inset;
+    animation: spin 20s linear infinite paused;
+  }
+  .disc.playing { animation-play-state: running; }
+  .disc::before {
+    content: ''; position: absolute; inset: 8%;
+    border-radius: 50%;
+    background: var(--bg-1);
+    background-image:
+      repeating-radial-gradient(circle at center, transparent 0, transparent 6px, rgba(255,255,255,.04) 6px, rgba(255,255,255,.04) 7px);
+  }
+  .disc::after {
+    content: ''; position: absolute; inset: 44%;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 30px var(--accent);
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+ 
+  /* Halo rings */
+  .halo {
+    position: absolute; inset: -8%; border-radius: 50%;
+    border: 1px solid var(--accent);
+    opacity: 0;
+  }
+  .disc.playing ~ .halo { animation: halo-pulse 2.4s ease-out infinite; }
+  .disc.playing ~ .halo-2 { animation-delay: .8s; }
+  .disc.playing ~ .halo-3 { animation-delay: 1.6s; }
+  @keyframes halo-pulse {
+    0%   { opacity: .6; transform: scale(.95); }
+    100% { opacity: 0; transform: scale(1.4); }
+  }
+ 
+  /* Back button */
+  .back-btn {
+    position: fixed; top: 24px; left: 36px; z-index: 20;
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.12);
+    color: var(--text);
+    padding: 10px 18px 10px 14px;
+    border-radius: 99px;
+    display: none; align-items: center; gap: 8px;
+    cursor: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .2em;
+    backdrop-filter: blur(10px);
+    transition: all .3s var(--ease);
+  }
+  .back-btn.show { display: flex; }
+  .back-btn:hover { background: var(--accent); border-color: var(--accent); color: var(--bg-1); }
+  .back-btn svg { width: 14px; height: 14px; }
+ 
+  /* Mood badges in player */
+  .mood-badges {
+    display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap;
+  }
+  .mood-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .18em;
+    padding: 6px 12px;
+    border-radius: 99px;
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.12);
+    color: var(--text-dim);
+  }
+ 
+  /* Decorative side text */
+  .side-text {
+    position: fixed;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: .3em;
+    text-transform: uppercase;
+    z-index: 8;
+    writing-mode: vertical-rl;
+  }
+  .side-text.right { right: 24px; top: 50%; transform: translateY(-50%); }
+  .side-text.left { left: 24px; bottom: 36px; writing-mode: horizontal-tb; }
+ 
+  /* Footer marquee on picker */
+  .marquee {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 8;
+    overflow: hidden;
+    border-top: 1px solid rgba(255,255,255,.08);
+    background: rgba(0,0,0,.2);
+    backdrop-filter: blur(10px);
+  }
+  .marquee-inner {
+    display: flex; gap: 60px;
+    padding: 14px 0;
+    animation: marquee 40s linear infinite;
+    white-space: nowrap;
+    font-family: 'Instrument Serif', serif;
+    font-size: 14px;
+    color: var(--text-dim);
+  }
+  .marquee span { display: inline-flex; align-items: center; gap: 60px; }
+  .marquee em { color: var(--accent); font-style: italic; }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+</style>
+</head>
+<body>
+ 
+<!-- Custom cursor -->
+<div class="cursor-dot"></div>
+<div class="cursor-ring"></div>
+ 
+<!-- Background -->
+<div class="bg-gradient"></div>
+<canvas id="particles"></canvas>
+<canvas id="visualizer"></canvas>
+<div class="grain"></div>
+ 
+<!-- Topbar -->
+<div class="topbar">
+  <div class="logo">moodwave<span>.</span></div>
+  <div class="meta">
+    <div><span class="live-dot"></span>Tuning to your frequency</div>
+    <div id="emotion-readout">No mood selected</div>
+  </div>
+</div>
+ 
+<button class="back-btn" id="back-btn">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+  Change mood
+</button>
+ 
+<div class="side-text right">moodwave / 2026 / a feeling, not a genre</div>
+<div class="side-text left" id="bpm-readout">BPM —</div>
+ 
+<!-- STAGE -->
+<div class="stage">
+ 
+  <!-- View 1: Picker -->
+  <div class="view view-picker" id="view-picker">
+    <h1 class="headline">how do you<br><em>feel</em> today?</h1>
+    <p class="sub">Pick a feeling — or describe one — and we'll generate a soundscape tuned to that emotion. No playlists, no algorithms. Just sound shaped to a mood.</p>
+ 
+    <div class="searchbar">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="search-input" type="text" placeholder="Try: nostalgic, restless, in love, electric…" />
+    </div>
+ 
+    <div class="emotions" id="emotions"></div>
+  </div>
+ 
+  <!-- View 2: Player -->
+  <div class="view view-player" id="view-player">
+    <div class="player-wrap">
+      <div>
+        <div class="now-emotion"><span class="dot">●</span> Now playing for <span id="now-emo">—</span></div>
+        <h2 class="track-name" id="track-name">—</h2>
+        <p class="track-meta" id="track-meta">—</p>
+        <div class="controls">
+          <button class="ctrl" id="prev-btn" aria-label="Previous">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h2v16H6zM10 12l10-8v16z"/></svg>
+          </button>
+          <button class="ctrl play" id="play-btn" aria-label="Play">
+            <svg id="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+          <button class="ctrl" id="next-btn" aria-label="Next">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 4h2v16h-2zM14 12L4 4v16z"/></svg>
+          </button>
+        </div>
+        <div class="progress"><div class="progress-fill" id="progress-fill"></div></div>
+        <div class="time-row"><span id="t-cur">0:00</span><span id="t-tot">∞</span></div>
+        <div class="mood-badges" id="mood-badges"></div>
+      </div>
+      <div class="disc-wrap">
+        <div class="disc" id="disc"></div>
+        <div class="halo halo-1"></div>
+        <div class="halo halo-2"></div>
+        <div class="halo halo-3"></div>
+      </div>
+    </div>
+  </div>
+ 
+</div>
+ 
+<div class="marquee">
+  <div class="marquee-inner">
+    <span>
+      <em>feel</em> · the air shifts · <em>sonic mood</em> · close your eyes ·
+      <em>moodwave</em> · synesthesia in stereo · <em>let it move you</em> ·
+      eight feelings, infinite variations · <em>tune in</em> · listen with the body ·
+      <em>feel</em> · the air shifts · <em>sonic mood</em> · close your eyes ·
+      <em>moodwave</em> · synesthesia in stereo · <em>let it move you</em> ·
+      eight feelings, infinite variations · <em>tune in</em> · listen with the body ·
+    </span>
+  </div>
+</div>
+ 
+<script>
+/* ===================================================================
+   MOODWAVE — emotion-driven sonic soundscapes
+   =================================================================== */
+ 
+/* ---------- EMOTION DATA ---------- */
+const EMOTIONS = {
+  happy: {
+    label: 'Happy',
+    glyph: '✿',
+    desc: 'Sun-drenched, bouncing',
+    color: '#FFB627',
+    accent2: '#FF7B54',
+    bg1: '#2a1a08',
+    bg2: '#5c2a0f',
+    track: 'Sunshine Through Closed Eyelids',
+    meta: 'A warm major-key arpeggio rolling over a soft pad. Imagine summer light through a window in the late afternoon.',
+    badges: ['major key', '128 bpm', 'optimistic', 'bright'],
+    bpm: 128,
+    grain: 0.06,
+    scale: [60, 62, 64, 67, 69, 72, 74, 76], // C major-ish
+    tempo: 0.22,
+    waveform: 'triangle',
+    pulseStyle: 'bounce',
+    particleStyle: 'sparkle'
+  },
+  sad: {
+    label: 'Sad',
+    glyph: '❀',
+    desc: 'Slow, deep, blue',
+    color: '#6B8FD6',
+    accent2: '#A28FD0',
+    bg1: '#0a1024',
+    bg2: '#1a1a3a',
+    track: 'Rain on the Last Day',
+    meta: 'A minor piano motif drifting under a long pad. Patient, melancholy, unhurried — meant for the window seat.',
+    badges: ['minor key', '62 bpm', 'reflective', 'rain'],
+    bpm: 62,
+    grain: 0.1,
+    scale: [55, 58, 60, 62, 63, 67, 70, 72], // minor
+    tempo: 0.7,
+    waveform: 'sine',
+    pulseStyle: 'drift',
+    particleStyle: 'rain'
+  },
+  angry: {
+    label: 'Angry',
+    glyph: '✕',
+    desc: 'Sharp, distorted, raw',
+    color: '#FF3B3B',
+    accent2: '#FF8800',
+    bg1: '#1a0606',
+    bg2: '#3a0a0a',
+    track: 'Static in the Veins',
+    meta: 'Distorted square waves over a thudding floor. For the moment right before you decide what to do with the feeling.',
+    badges: ['distorted', '160 bpm', 'aggressive', 'release'],
+    bpm: 160,
+    grain: 0.15,
+    scale: [40, 41, 43, 46, 48, 51, 53, 55],
+    tempo: 0.16,
+    waveform: 'sawtooth',
+    pulseStyle: 'shake',
+    particleStyle: 'sparks'
+  },
+  calm: {
+    label: 'Calm',
+    glyph: '~',
+    desc: 'Gentle, breathing',
+    color: '#7DD3C0',
+    accent2: '#B8E6D9',
+    bg1: '#0a1818',
+    bg2: '#13302c',
+    track: 'Slow Tide, Long Breath',
+    meta: 'A drifting sine drone with occasional held notes. Breathe in for four, hold for four, out for six.',
+    badges: ['ambient', '50 bpm', 'spacious', 'breathing'],
+    bpm: 50,
+    grain: 0.04,
+    scale: [60, 64, 67, 71, 72, 76, 79, 83],
+    tempo: 1.0,
+    waveform: 'sine',
+    pulseStyle: 'wave',
+    particleStyle: 'bubbles'
+  },
+  energetic: {
+    label: 'Energetic',
+    glyph: '⚡',
+    desc: 'Electric, surging',
+    color: '#FF1F8F',
+    accent2: '#00E0FF',
+    bg1: '#1a0628',
+    bg2: '#28063a',
+    track: 'Voltage in the Spine',
+    meta: 'Rapid pulsing saw waves over a four-on-the-floor pulse. For training, sprinting, or finally answering an email.',
+    badges: ['driving', '140 bpm', 'pulsing', 'kinetic'],
+    bpm: 140,
+    grain: 0.08,
+    scale: [60, 63, 65, 67, 70, 72, 75, 77],
+    tempo: 0.18,
+    waveform: 'sawtooth',
+    pulseStyle: 'strobe',
+    particleStyle: 'streaks'
+  },
+  romantic: {
+    label: 'Romantic',
+    glyph: '♥',
+    desc: 'Soft, floating, warm',
+    color: '#FF6FB5',
+    accent2: '#FFB3D1',
+    bg1: '#1f0a18',
+    bg2: '#3a0f2a',
+    track: 'Letters Never Sent',
+    meta: 'Soft FM bells over a held pad. The musical equivalent of someone leaning their head on your shoulder.',
+    badges: ['tender', '78 bpm', 'lush', 'intimate'],
+    bpm: 78,
+    grain: 0.05,
+    scale: [60, 64, 65, 67, 69, 72, 76, 77],
+    tempo: 0.5,
+    waveform: 'sine',
+    pulseStyle: 'float',
+    particleStyle: 'hearts'
+  },
+  focused: {
+    label: 'Focused',
+    glyph: '▢',
+    desc: 'Minimal, anchored',
+    color: '#9BB4FF',
+    accent2: '#C8D4FF',
+    bg1: '#0a0e1f',
+    bg2: '#141a30',
+    track: 'A Quiet Engine Running',
+    meta: 'Minimal drone with sparse marker tones. Built to disappear behind your work — present, never demanding.',
+    badges: ['minimal', '90 bpm', 'lo-fi', 'deep work'],
+    bpm: 90,
+    grain: 0.07,
+    scale: [48, 55, 60, 62, 67, 72, 74, 79],
+    tempo: 0.45,
+    waveform: 'triangle',
+    pulseStyle: 'tick',
+    particleStyle: 'grid'
+  },
+  nostalgic: {
+    label: 'Nostalgic',
+    glyph: '◐',
+    desc: 'Vinyl, sepia-soaked',
+    color: '#E89B5C',
+    accent2: '#C77E48',
+    bg1: '#1c1108',
+    bg2: '#36210e',
+    track: 'Memory of a Summer I Never Had',
+    meta: 'Filtered, slightly detuned tones with vinyl crackle. Sounds like an old tape found in a drawer you forgot existed.',
+    badges: ['vintage', '72 bpm', 'warm', 'analog'],
+    bpm: 72,
+    grain: 0.18,
+    scale: [55, 59, 60, 64, 67, 71, 72, 76],
+    tempo: 0.55,
+    waveform: 'sine',
+    pulseStyle: 'sway',
+    particleStyle: 'dust'
+  }
+};
+ 
+/* ---------- ELEMENTS ---------- */
+const $ = id => document.getElementById(id);
+const emotionsEl = $('emotions');
+const viewPicker = $('view-picker');
+const viewPlayer = $('view-player');
+const backBtn = $('back-btn');
+const searchInput = $('search-input');
+const emotionReadout = $('emotion-readout');
+const bpmReadout = $('bpm-readout');
+ 
+/* ---------- BUILD EMOTION GRID ---------- */
+Object.entries(EMOTIONS).forEach(([key, e]) => {
+  const btn = document.createElement('button');
+  btn.className = 'emo-btn';
+  btn.style.setProperty('--emo-color', e.color);
+  btn.innerHTML = `
+    <span class="glyph">${e.glyph}</span>
+    <span class="label">${e.label}</span>
+    <span class="desc">${e.desc}</span>
+  `;
+  btn.addEventListener('mousemove', ev => {
+    const r = btn.getBoundingClientRect();
+    btn.style.setProperty('--mx', ((ev.clientX - r.left) / r.width * 100) + '%');
+    btn.style.setProperty('--my', ((ev.clientY - r.top) / r.height * 100) + '%');
+  });
+  btn.addEventListener('click', () => selectEmotion(key));
+  emotionsEl.appendChild(btn);
+});
+ 
+/* ---------- SEARCH (fuzzy emotion match) ---------- */
+const KEYWORDS = {
+  happy: ['happy','joy','joyful','sunny','cheer','glad','good','great','smile','bright','optimistic'],
+  sad: ['sad','blue','down','melancholy','lonely','hurt','cry','tear','grief','heartbroken','low'],
+  angry: ['angry','mad','rage','furious','pissed','frustrated','annoyed','irritated','fight'],
+  calm: ['calm','relax','chill','peaceful','quiet','still','serene','zen','gentle','breath'],
+  energetic: ['energetic','energy','hyped','pumped','wired','electric','restless','active','workout','run'],
+  romantic: ['romantic','love','crush','in love','tender','sweet','intimate','kiss','heart'],
+  focused: ['focus','focused','concentrate','study','work','deep work','flow','productive'],
+  nostalgic: ['nostalgic','memory','remember','past','vintage','old','retro','sepia','wistful']
+};
+ 
+searchInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const q = searchInput.value.trim().toLowerCase();
+    if (!q) return;
+    let best = null;
+    for (const [key, words] of Object.entries(KEYWORDS)) {
+      if (words.some(w => q.includes(w))) { best = key; break; }
+    }
+    if (best) selectEmotion(best);
+    else {
+      searchInput.style.borderColor = '#ff4444';
+      searchInput.placeholder = "Hmm — try 'happy', 'angry', 'in love'…";
+      searchInput.value = '';
+      setTimeout(() => searchInput.style.borderColor = '', 1200);
+    }
+  }
+});
+ 
+/* ---------- WEB AUDIO ENGINE ---------- */
+let audioCtx = null;
+let masterGain = null;
+let analyser = null;
+let analyserData = null;
+let activeNodes = [];
+let stepInterval = null;
+let isPlaying = false;
+let currentEmotion = null;
+let elapsed = 0;
+let elapsedTimer = null;
+ 
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0;
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 256;
+  analyserData = new Uint8Array(analyser.frequencyBinCount);
+  masterGain.connect(analyser);
+  analyser.connect(audioCtx.destination);
+}
+ 
+function midiToFreq(m) { return 440 * Math.pow(2, (m - 69) / 12); }
+ 
+function playNote(freq, duration, wave = 'sine', gain = 0.15, attack = 0.02, release = 0.4, filterFreq = null, detune = 0) {
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = wave;
+  o.frequency.value = freq;
+  o.detune.value = detune;
+  let outNode = g;
+  if (filterFreq) {
+    const f = audioCtx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = filterFreq;
+    f.Q.value = 4;
+    g.connect(f);
+    outNode = f;
+  }
+  const now = audioCtx.currentTime;
+  g.gain.setValueAtTime(0, now);
+  g.gain.linearRampToValueAtTime(gain, now + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + duration + release);
+  o.connect(g);
+  outNode.connect(masterGain);
+  o.start(now);
+  o.stop(now + duration + release + 0.05);
+  activeNodes.push(o);
+  // cleanup
+  setTimeout(() => {
+    activeNodes = activeNodes.filter(n => n !== o);
+  }, (duration + release + 0.1) * 1000);
+}
+ 
+function playPad(emo) {
+  // continuous low pad as bed
+  const root = midiToFreq(emo.scale[0] - 12);
+  const o1 = audioCtx.createOscillator();
+  const o2 = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o1.type = 'sine'; o2.type = 'sine';
+  o1.frequency.value = root;
+  o2.frequency.value = root * 1.5;
+  o2.detune.value = 8;
+  g.gain.value = 0.06;
+  const lfo = audioCtx.createOscillator();
+  const lfoGain = audioCtx.createGain();
+  lfo.frequency.value = 0.15;
+  lfoGain.gain.value = 0.04;
+  lfo.connect(lfoGain).connect(g.gain);
+  o1.connect(g); o2.connect(g);
+  g.connect(masterGain);
+  o1.start(); o2.start(); lfo.start();
+  return [o1, o2, lfo];
+}
+ 
+let padNodes = [];
+let stepCounter = 0;
+ 
+function startSequence(emoKey) {
+  const emo = EMOTIONS[emoKey];
+  stopSequence();
+  padNodes = playPad(emo);
+ 
+  const step = () => {
+    if (!isPlaying) return;
+    const scale = emo.scale;
+    const note = scale[Math.floor(Math.random() * scale.length)];
+    const freq = midiToFreq(note);
+ 
+    // Different per-emotion textures
+    if (emoKey === 'angry') {
+      playNote(freq, 0.08, 'sawtooth', 0.18, 0.001, 0.15, 1200, Math.random() < .3 ? 30 : 0);
+      if (Math.random() < .4) playNote(midiToFreq(note - 12), 0.1, 'square', 0.22, 0.001, 0.1, 600);
+    } else if (emoKey === 'happy') {
+      playNote(freq, 0.15, 'triangle', 0.12, 0.01, 0.4, 3000);
+      if (Math.random() < .3) playNote(midiToFreq(note + 7), 0.2, 'sine', 0.06, 0.02, 0.5);
+    } else if (emoKey === 'sad') {
+      playNote(freq, 0.6, 'sine', 0.1, 0.2, 1.2, 1500);
+      if (Math.random() < .2) playNote(midiToFreq(scale[0]), 1.0, 'sine', 0.06, 0.3, 1.8, 800);
+    } else if (emoKey === 'calm') {
+      playNote(freq, 1.2, 'sine', 0.09, 0.5, 2.0, 1200);
+    } else if (emoKey === 'energetic') {
+      playNote(freq, 0.1, 'sawtooth', 0.1, 0.005, 0.1, 2200);
+      if (stepCounter % 2 === 0) playNote(midiToFreq(scale[0] - 12), 0.15, 'square', 0.18, 0.001, 0.05, 400);
+    } else if (emoKey === 'romantic') {
+      playNote(freq, 0.5, 'sine', 0.09, 0.05, 0.8, 2000);
+      playNote(freq * 2.01, 0.4, 'sine', 0.03, 0.05, 0.5, 3000);
+    } else if (emoKey === 'focused') {
+      if (stepCounter % 4 === 0) playNote(freq, 0.25, 'triangle', 0.07, 0.02, 0.4, 1500);
+      if (stepCounter % 16 === 0) playNote(midiToFreq(scale[0]), 0.4, 'sine', 0.08, 0.05, 0.6, 1000);
+    } else if (emoKey === 'nostalgic') {
+      playNote(freq, 0.6, 'sine', 0.08, 0.1, 1.0, 900, 5);
+      // vinyl crackle
+      if (Math.random() < .5) {
+        const noise = audioCtx.createBufferSource();
+        const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.05, audioCtx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.5;
+        noise.buffer = buf;
+        const ng = audioCtx.createGain();
+        ng.gain.value = 0.04;
+        noise.connect(ng).connect(masterGain);
+        noise.start();
+      }
+    }
+    stepCounter++;
+  };
+ 
+  stepInterval = setInterval(step, emo.tempo * 1000);
+}
+ 
+function stopSequence() {
+  if (stepInterval) clearInterval(stepInterval);
+  padNodes.forEach(n => { try { n.stop(); } catch(e){} });
+  padNodes = [];
+  activeNodes.forEach(n => { try { n.stop(); } catch(e){} });
+  activeNodes = [];
+}
+ 
+function setPlaying(v) {
+  if (!audioCtx) initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  isPlaying = v;
+  const now = audioCtx.currentTime;
+  masterGain.gain.cancelScheduledValues(now);
+  if (v) {
+    masterGain.gain.linearRampToValueAtTime(0.55, now + 0.6);
+    startSequence(currentEmotion);
+    $('disc').classList.add('playing');
+    $('play-icon').innerHTML = '<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>';
+    startElapsed();
+  } else {
+    masterGain.gain.linearRampToValueAtTime(0, now + 0.4);
+    setTimeout(stopSequence, 400);
+    $('disc').classList.remove('playing');
+    $('play-icon').innerHTML = '<path d="M8 5v14l11-7z"/>';
+    stopElapsed();
+  }
+}
+ 
+function startElapsed() {
+  stopElapsed();
+  elapsedTimer = setInterval(() => {
+    elapsed++;
+    const m = Math.floor(elapsed / 60);
+    const s = (elapsed % 60).toString().padStart(2, '0');
+    $('t-cur').textContent = `${m}:${s}`;
+    const pct = ((elapsed % 240) / 240) * 100;
+    $('progress-fill').style.width = pct + '%';
+  }, 1000);
+}
+function stopElapsed() { if (elapsedTimer) clearInterval(elapsedTimer); }
+ 
+/* ---------- SELECT EMOTION ---------- */
+function selectEmotion(key) {
+  const emo = EMOTIONS[key];
+  currentEmotion = key;
+  elapsed = 0;
+  $('t-cur').textContent = '0:00';
+  $('progress-fill').style.width = '0%';
+ 
+  // Apply CSS variables
+  document.documentElement.style.setProperty('--accent', emo.color);
+  document.documentElement.style.setProperty('--accent-2', emo.accent2);
+  document.documentElement.style.setProperty('--bg-1', emo.bg1);
+  document.documentElement.style.setProperty('--bg-2', emo.bg2);
+  document.documentElement.style.setProperty('--grain', emo.grain);
+ 
+  // Update text
+  $('now-emo').textContent = emo.label.toLowerCase();
+  $('track-name').textContent = emo.track;
+  $('track-meta').textContent = emo.meta;
+  emotionReadout.textContent = emo.label.toLowerCase();
+  bpmReadout.textContent = `BPM ${emo.bpm}`;
+ 
+  // Badges
+  const badges = $('mood-badges');
+  badges.innerHTML = '';
+  emo.badges.forEach(b => {
+    const el = document.createElement('span');
+    el.className = 'mood-badge';
+    el.textContent = b;
+    badges.appendChild(el);
+  });
+ 
+  // Switch views
+  viewPicker.style.display = 'none';
+  viewPlayer.classList.add('active');
+  backBtn.classList.add('show');
+ 
+  // Switch particle style
+  particleSystem.setStyle(emo.particleStyle, emo.color, emo.accent2);
+ 
+  // Auto-play
+  setPlaying(true);
+}
+ 
+backBtn.addEventListener('click', () => {
+  setPlaying(false);
+  viewPicker.style.display = 'block';
+  viewPlayer.classList.remove('active');
+  backBtn.classList.remove('show');
+  emotionReadout.textContent = 'No mood selected';
+  bpmReadout.textContent = 'BPM —';
+  particleSystem.setStyle('idle', '#ff5e8a', '#ffd166');
+});
+ 
+$('play-btn').addEventListener('click', () => setPlaying(!isPlaying));
+$('next-btn').addEventListener('click', () => {
+  const keys = Object.keys(EMOTIONS);
+  const i = keys.indexOf(currentEmotion);
+  selectEmotion(keys[(i + 1) % keys.length]);
+});
+$('prev-btn').addEventListener('click', () => {
+  const keys = Object.keys(EMOTIONS);
+  const i = keys.indexOf(currentEmotion);
+  selectEmotion(keys[(i - 1 + keys.length) % keys.length]);
+});
+ 
+/* ===================================================================
+   PARTICLE SYSTEM
+   =================================================================== */
+const particleCanvas = $('particles');
+const pctx = particleCanvas.getContext('2d');
+ 
+function resize() {
+  particleCanvas.width = innerWidth;
+  particleCanvas.height = innerHeight;
+  visualizerCanvas.width = innerWidth;
+  visualizerCanvas.height = innerHeight;
+}
+resize();
+addEventListener('resize', resize);
+ 
+class Particle {
+  constructor(style, color, color2) {
+    this.style = style;
+    this.color = color;
+    this.color2 = color2;
+    this.reset(true);
+  }
+  reset(initial = false) {
+    const w = particleCanvas.width, h = particleCanvas.height;
+    this.x = Math.random() * w;
+    this.y = initial ? Math.random() * h : -20;
+    this.vx = 0; this.vy = 0;
+    this.life = 1;
+    this.size = 2 + Math.random() * 3;
+    this.rot = Math.random() * Math.PI * 2;
+    this.spin = (Math.random() - .5) * 0.05;
+ 
+    switch(this.style) {
+      case 'sparkle':
+        this.vy = 0.2 + Math.random() * 0.5;
+        this.vx = (Math.random() - .5) * 0.3;
+        this.size = 1 + Math.random() * 2.5;
+        break;
+      case 'rain':
+        this.vy = 3 + Math.random() * 4;
+        this.vx = -0.2;
+        this.size = 0.8;
+        this.len = 8 + Math.random() * 12;
+        break;
+      case 'sparks':
+        this.vx = (Math.random() - .5) * 6;
+        this.vy = (Math.random() - .5) * 6;
+        this.size = 1 + Math.random() * 2;
+        this.life = 1;
+        this.decay = 0.015 + Math.random() * 0.02;
+        break;
+      case 'bubbles':
+        this.y = initial ? Math.random() * h : h + 20;
+        this.vy = -(0.3 + Math.random() * 0.7);
+        this.size = 3 + Math.random() * 12;
+        break;
+      case 'streaks':
+        this.vx = (Math.random() < .5 ? 1 : -1) * (4 + Math.random() * 8);
+        this.vy = 0;
+        this.size = 1.5;
+        this.len = 30 + Math.random() * 60;
+        break;
+      case 'hearts':
+        this.y = initial ? Math.random() * h : h + 20;
+        this.vy = -(0.4 + Math.random() * 0.6);
+        this.vx = Math.sin(this.y * 0.01) * 0.5;
+        this.size = 4 + Math.random() * 6;
+        break;
+      case 'grid':
+        this.gx = Math.floor(this.x / 60) * 60;
+        this.gy = Math.floor(this.y / 60) * 60;
+        this.phase = Math.random() * Math.PI * 2;
+        break;
+      case 'dust':
+        this.vy = 0.1 + Math.random() * 0.3;
+        this.vx = (Math.random() - .5) * 0.2;
+        this.size = 1 + Math.random() * 2;
+        break;
+      default: // idle
+        this.vy = 0.15 + Math.random() * 0.3;
+        this.vx = (Math.random() - .5) * 0.2;
+        this.size = 1.5 + Math.random() * 2;
+    }
+  }
+  update() {
+    if (this.style === 'sparks') {
+      this.x += this.vx; this.y += this.vy;
+      this.vy += 0.15;
+      this.life -= this.decay;
+      if (this.life <= 0) this.reset();
+    } else if (this.style === 'hearts') {
+      this.y += this.vy;
+      this.vx = Math.sin(this.y * 0.02) * 0.8;
+      this.x += this.vx;
+      if (this.y < -20) this.reset();
+    } else if (this.style === 'grid') {
+      this.phase += 0.03;
+    } else {
+      this.x += this.vx; this.y += this.vy;
+      this.rot += this.spin;
+      const w = particleCanvas.width, h = particleCanvas.height;
+      if (this.y > h + 20 || this.x < -20 || this.x > w + 20) this.reset();
+      if (this.style === 'bubbles' && this.y < -20) this.reset();
+    }
+  }
+  draw(ctx) {
+    ctx.save();
+    switch(this.style) {
+      case 'sparkle':
+        ctx.translate(this.x, this.y); ctx.rotate(this.rot);
+        ctx.fillStyle = this.color;
+        ctx.shadowBlur = 12; ctx.shadowColor = this.color;
+        ctx.fillRect(-this.size/2, -this.size*4, this.size, this.size*8);
+        ctx.fillRect(-this.size*4, -this.size/2, this.size*8, this.size);
+        break;
+      case 'rain':
+        ctx.strokeStyle = this.color; ctx.lineWidth = this.size;
+        ctx.globalAlpha = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y);
+        ctx.lineTo(this.x - 2, this.y + this.len);
+        ctx.stroke();
+        break;
+      case 'sparks':
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = this.life;
+        ctx.shadowBlur = 10; ctx.shadowColor = this.color;
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+        break;
+      case 'bubbles':
+        ctx.strokeStyle = this.color;
+        ctx.globalAlpha = 0.4;
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.stroke();
+        break;
+      case 'streaks':
+        ctx.strokeStyle = this.color;
+        ctx.shadowBlur = 18; ctx.shadowColor = this.color;
+        ctx.lineWidth = this.size;
+        ctx.globalAlpha = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y);
+        ctx.lineTo(this.x - Math.sign(this.vx) * this.len, this.y);
+        ctx.stroke();
+        break;
+      case 'hearts':
+        ctx.translate(this.x, this.y); ctx.scale(this.size / 10, this.size / 10);
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = 0.7;
+        ctx.shadowBlur = 15; ctx.shadowColor = this.color;
+        ctx.beginPath();
+        ctx.moveTo(0, 3);
+        ctx.bezierCurveTo(-10, -7, -10, 5, 0, 10);
+        ctx.bezierCurveTo(10, 5, 10, -7, 0, 3);
+        ctx.fill();
+        break;
+      case 'grid':
+        ctx.fillStyle = this.color;
+        const a = 0.2 + Math.sin(this.phase) * 0.2;
+        ctx.globalAlpha = Math.max(0, a);
+        ctx.fillRect(this.gx, this.gy, 2, 2);
+        break;
+      case 'dust':
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = 0.4;
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+        break;
+      default:
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = 0.6;
+        ctx.shadowBlur = 8; ctx.shadowColor = this.color;
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+ 
+const particleSystem = {
+  particles: [],
+  style: 'idle',
+  color: '#ff5e8a',
+  color2: '#ffd166',
+  setStyle(style, color, color2) {
+    this.style = style;
+    this.color = color;
+    this.color2 = color2;
+    const count = style === 'grid' ? 200
+      : style === 'streaks' ? 30
+      : style === 'rain' ? 120
+      : style === 'sparks' ? 60
+      : 80;
+    this.particles = Array.from({ length: count }, () => new Particle(style, color, color2));
+  }
+};
+particleSystem.setStyle('idle', '#ff5e8a', '#ffd166');
+ 
+/* ---------- VISUALIZER ---------- */
+const visualizerCanvas = $('visualizer');
+const vctx = visualizerCanvas.getContext('2d');
+ 
+function drawVisualizer() {
+  const w = visualizerCanvas.width, h = visualizerCanvas.height;
+  vctx.clearRect(0, 0, w, h);
+ 
+  if (!isPlaying || !analyser) return;
+  analyser.getByteFrequencyData(analyserData);
+ 
+  // Circular visualizer behind disc center on player view, full-width bar on picker
+  if (viewPlayer.classList.contains('active')) {
+    // Find disc center
+    const disc = $('disc');
+    const r = disc.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const baseRadius = r.width / 2 + 30;
+ 
+    vctx.save();
+    vctx.translate(cx, cy);
+    const bars = 96;
+    for (let i = 0; i < bars; i++) {
+      const v = analyserData[Math.floor(i * analyserData.length / bars)] / 255;
+      const len = v * 80 + 4;
+      const angle = (i / bars) * Math.PI * 2;
+      vctx.save();
+      vctx.rotate(angle);
+      const grad = vctx.createLinearGradient(0, baseRadius, 0, baseRadius + len);
+      grad.addColorStop(0, particleSystem.color);
+      grad.addColorStop(1, particleSystem.color2);
+      vctx.fillStyle = grad;
+      vctx.shadowBlur = 15;
+      vctx.shadowColor = particleSystem.color;
+      vctx.fillRect(-1.5, baseRadius, 3, len);
+      vctx.restore();
+    }
+    vctx.restore();
+  } else {
+    // Idle bar
+    const bars = 64;
+    const bw = w / bars;
+    for (let i = 0; i < bars; i++) {
+      const v = analyserData[Math.floor(i * analyserData.length / bars)] / 255;
+      const bh = v * 100;
+      vctx.fillStyle = particleSystem.color;
+      vctx.globalAlpha = 0.4;
+      vctx.fillRect(i * bw, h - bh, bw - 1, bh);
+    }
+  }
+}
+ 
+/* ---------- RENDER LOOP ---------- */
+function frame() {
+  pctx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+  particleSystem.particles.forEach(p => { p.update(); p.draw(pctx); });
+  drawVisualizer();
+  requestAnimationFrame(frame);
+}
+frame();
+ 
+/* ---------- CUSTOM CURSOR ---------- */
+const cdot = document.querySelector('.cursor-dot');
+const cring = document.querySelector('.cursor-ring');
+let mx = innerWidth / 2, my = innerHeight / 2;
+let rx = mx, ry = my;
+addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+function cursorLoop() {
+  cdot.style.transform = `translate(${mx}px, ${my}px) translate(-50%, -50%)`;
+  rx += (mx - rx) * 0.18;
+  ry += (my - ry) * 0.18;
+  cring.style.transform = `translate(${rx}px, ${ry}px) translate(-50%, -50%)`;
+  requestAnimationFrame(cursorLoop);
+}
+cursorLoop();
+document.querySelectorAll('button, input').forEach(el => {
+  el.addEventListener('mouseenter', () => cring.classList.add('hover'));
+  el.addEventListener('mouseleave', () => cring.classList.remove('hover'));
+});
+ 
+/* ---------- INIT AUDIO ON FIRST INTERACTION ---------- */
+document.addEventListener('click', () => initAudio(), { once: true });
+</script>
+</body>
+</html>
